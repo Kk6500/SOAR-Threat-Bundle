@@ -1,0 +1,8 @@
+{
+  "alert_id": "EDR-908234-ALERT",
+  "timestamp": "2026-05-20T12:50:00Z",
+  "severity": "high",
+  "source_tool": "MockEDR",
+  "observable_type": "ip",
+  "observable_value": "185.220.101.5"
+}
