@@ -1,4 +1,5 @@
 import os
+import aiohttp
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -18,15 +19,47 @@ class AlertPayload(BaseModel):
         observable_value: str = Field(..., description ="The indicator value")
 
 
-
-
-
-async def fetch_alert_payload(session: aiohttp.ClientSession,
- alert_id: str, timestamp: str, severity: str) -> dict:
+async def fetch_alert_payload(session: aiohttp.ClientSession, observable_value: str) -> dict:
     url = f"https://api.abuseipdb.com/api/v2/check"
+    
+    abuseAPI = os.getenv('ABUSEIPDB_API_KEY')
+    headers = {
+    "accept": "application/json",
+    "Key": abuseAPI
+    }
+    
+    params = {
+        "ipAddress": observable_value,
+        "maxAgeInDays": "90"
+    }
 
-async def query_virustotal(session: aiohttp.ClientSession,) -> dict:
+    try:
+        async with session.get(url, headers=headers, params=params) as response:
+            if response.status == 200:
+                data = await response.json()
+                return {"malicious_score": data["data"]["abuseConfidenceScore"]}
+            else:
+                return {"error": f"HTTP {response.status}"}
+    except Exception as e:
+        return {"error": e}
+
+async def query_virustotal(session: aiohttp.ClientSession, ip: str) -> dict:
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+    VirusTotalAPI = os.getenv('VIRUSTOTAL_API_KEY')
+    headers = {
+        "accept": "application/json",
+        "x-apikey": VirusTotalAPI,
+            }
+    try:
+        async with session.get(url, headers=headers) as response:
+            if response.status == 200:
+                data = await response.json()
+                return {data}
+            else:
+                return {"error": f"HTTP {response.status}"}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # ==========================================
 # 2. STANDALONE ASYNC CLIENTS
