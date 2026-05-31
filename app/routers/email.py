@@ -5,6 +5,11 @@ from fastapi import APIRouter, UploadFile, File
 
 router = APIRouter()
 
+def sanitize_email(text: str) -> str:
+    if not isinstance(text, str):
+        return str(text) if text is not None else "Unknown"
+    return text.encode("utf-8", errors="ignore").decode("utf-8")
+
 def url_extracter(text: str) -> list:
 
     ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -24,10 +29,12 @@ def url_extracter(text: str) -> list:
        }
 
 
-def email_plaintext_extractor(email_content: Message) -> str:
+def email_text_extractor(email_content: Message) -> str:
+    valid_types = ["text/plain", "text/html"]
+
     if not email_content.is_multipart():
-        if email_content.get_content_type() =="text/plain":
-            return email_content.get_payload(decode=True).decode('utf-8', errors='ignore')
+        if email_content.get_content_type() in valid_types:
+            return email_content.get_payload(decode=True).decode('utf-8', errors="replace")
         return ""
     
     extracted_text = ""
@@ -35,14 +42,13 @@ def email_plaintext_extractor(email_content: Message) -> str:
     for part in email_content.walk():
         content_type = part.get_content_type()
         content_disposition = str(part.get("Content-Disposition"))
-        if content_type == "text/plain" and "attachment" not in content_disposition:
+        if content_type in valid_types and "attachment" not in content_disposition:
             try:
-                extracted_text = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                extracted_text += part.get_payload(decode=True).decode('utf-8', errors='replace') +"\n"
                 break
             except Exception as e:
                 print(f"Failed to decode part: {e}")
     return extracted_text.strip()
-
 
 @router.post("/api/email/parse")
 async def parse_uploaded_email(file: UploadFile = File(...)):
@@ -53,20 +59,19 @@ async def parse_uploaded_email(file: UploadFile = File(...)):
     subject = parsed_email.get("Subject")
     date = parsed_email.get("Date")
 
-    body_content = email_plaintext_extractor(parsed_email)
-
+    body_content = email_text_extractor(parsed_email)
     safe_links = url_extracter(body_content)
-    #add in ip thingy
+
     return {
         "status": "success",
         "metadata": {
-            "sender": sender,
-            "subject": subject,
-            "date": date
+            "sender": sanitize_email(sender),
+            "subject": sanitize_email(subject),
+            "date": sanitize_email(date)
         },
         "indicators": {
             "defanged_urls" : safe_links['url'],
             "ip": safe_links['ip']
         },
-        "preview": body_content[:300]
+        "preview": sanitize_email(body_content[:300])
         }

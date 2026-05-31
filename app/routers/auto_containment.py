@@ -11,7 +11,7 @@ class SuspiciousLogins(BaseModel):
     severity: str
     reason: str
 
-async def suspend_user_actions(email: str) -> dict:
+async def suspend_user(email: str) -> dict:
     api_url = "https://api.mock-enterprise-chat.com/v1/users/deactivate"
     admin_token = os.getenv("mock_website_admin_key")
 
@@ -36,8 +36,9 @@ async def trigger_contianment(webhook: SuspiciousLogins):
     if webhook.severity != "Critical":
         return {"status": "ignored", "message": "Severity too low for action"}
     try: 
-        action_result = await suspend_user_actions(webhook.employee_email)
-        return {                "status": "containment_successful",
+        action_result = await suspend_user(webhook.employee_email)
+        return {                
+            "status": "containment_successful",
             "incident_id": webhook.incident_id,
             "target": webhook.employee_email,
             "vendor_response": action_result

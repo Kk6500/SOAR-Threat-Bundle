@@ -54,7 +54,7 @@ async def virustotal(session: aiohttp.ClientSession, observable_value: str) -> d
     except Exception as e:
         return {"error": str(e)}
 
-async def parallelization(observable_value: str) -> dict:
+async def synchronization(observable_value: str) -> dict:
     async with aiohttp.ClientSession() as session:
         results = await asyncio.gather(
             abuse(session, observable_value),
@@ -67,12 +67,12 @@ async def parallelization(observable_value: str) -> dict:
         }
 
 @router.post("/api/v1/alerts")
-async def app_functions(payload: AlertPayload):
+async def ip_checker(payload: AlertPayload):
     if not payload.alert_id.strip():
         raise HTTPException(status_code=400, detail="Invalid format")
     
     print(f" alert {payload.alert_id}")
-    final_report = await parallelization(payload.observable_value)
+    final_report = await synchronization(payload.observable_value)
 
     return {
         "status": "success",

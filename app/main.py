@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from app.routers import ipchecker, email, auto_containment
 
-app = FastAPI(title="Threat Intel SOAR Engine", version="1.0")
+app = FastAPI(title="SOAR")
 
 app.include_router(ipchecker.router)
 app.include_router(email.router)
